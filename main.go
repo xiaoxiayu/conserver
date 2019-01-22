@@ -10,6 +10,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var JobQueue chan Job
+
 type WorkerPool struct {
 }
 
@@ -37,17 +39,13 @@ type Worker struct {
 func (w Worker) Start() {
 	go func() {
 		for {
-			// fmt.Println("worker start")
 			w.WorkerPool <- w.JobChannel
-
-			// fmt.Println("worker in")
 
 			select {
 			case job := <-w.JobChannel:
 				job.Do(w.ID)
 
 			case <-w.quit:
-				// we have received a signal to stop
 				return
 			}
 		}
@@ -68,20 +66,12 @@ func NewWorker(workerPool chan chan Job, id int) Worker {
 		quit:       make(chan bool)}
 }
 
-var JobQueue chan Job
-
 type Dispatcher struct {
 	WorkerPool chan chan Job
 	maxWorkers int
 }
 
-func NewDispatcher(maxWorkers, maxJobs int) *Dispatcher {
-	pool := make(chan chan Job, maxJobs)
-	return &Dispatcher{WorkerPool: pool, maxWorkers: maxWorkers}
-}
-
 func (d *Dispatcher) Run() {
-	// starting n number of workers
 	for i := 0; i < d.maxWorkers; i++ {
 		worker := NewWorker(d.WorkerPool, i)
 		worker.Start()
@@ -92,7 +82,6 @@ func (d *Dispatcher) Run() {
 
 func (d *Dispatcher) dispatch() {
 	for {
-
 		select {
 		case job := <-JobQueue:
 
@@ -103,6 +92,16 @@ func (d *Dispatcher) dispatch() {
 			}(job)
 		}
 	}
+}
+
+func NewDispatcher(maxWorkers, maxJobs int) *Dispatcher {
+	pool := make(chan chan Job, maxJobs)
+	return &Dispatcher{WorkerPool: pool, maxWorkers: maxWorkers}
+}
+
+func NewDispatcher(maxWorkers, maxJobs int) *Dispatcher {
+	pool := make(chan chan Job, maxJobs)
+	return &Dispatcher{WorkerPool: pool, maxWorkers: maxWorkers}
 }
 
 func JobAdd(w http.ResponseWriter, r *http.Request) {
