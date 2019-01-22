@@ -114,14 +114,13 @@ func JobAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	JobQueue = make(chan Job)
 
 	dispatcher := NewDispatcher(100, 10)
 	dispatcher.Run()
 
-	JobQueue = make(chan Job)
 	var router = mux.NewRouter()
 	router.HandleFunc("/test", JobAdd).Methods("POST")
-
 	http.Handle("/", router)
 
 	http.ListenAndServe(":9090", handlers.CORS(handlers.AllowedOrigins([]string{"*"}),
